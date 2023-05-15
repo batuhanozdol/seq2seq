@@ -3,6 +3,9 @@
 This is the code for training two encoder-decoder models used for summarization, bert2bert and bert2gpt2.
 Based on the notebook by patrickvonplaten (huggingface) to fine-tune summarization models using bert2bert and bert2gpt2.
 
+## Note
+For each model, dataset_batuhan.json dataset has to be placed under the current directory of the working model's .py path.
+
 ## Installation
 
 ```bash
