@@ -3,7 +3,7 @@
 This is the code for training two encoder-decoder models used for summarization, bert2bert and bert2gpt2.
 Based on the notebook by patrickvonplaten (huggingface) to fine-tune summarization models using bert2bert and bert2gpt2.
 
-## Installation
+## Installation
 
 ```bash
 pip install -r requirements.txt
