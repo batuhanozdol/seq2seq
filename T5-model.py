@@ -139,7 +139,7 @@ class T5FineTuner(pl.LightningModule):
         self.save_hyperparameters(hparams ) #hparams = hparams        
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name_or_path)
         self.tokenizer = T5Tokenizer.from_pretrained(hparams.tokenizer_name_or_path)
-        self.rouge_metric = load_metric("rouge")
+        self.rouge_metric = load_metric("rouge", experiment_id="unique_experiment")
         
         if self.hparams.freeze_embeds:
             self.freeze_embeds()
