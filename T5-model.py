@@ -508,28 +508,25 @@ def test(checkpoint):
     pd.options.display.max_colwidth = 50
     print(result)
 
-def main():
-    train()
-    test(result_output_path)
 
-if __name__ == '__main__':
     
-    rouge = datasets.load_metric("rouge")
-    base_t5_model = 'google/mt5-base'
-    tokenizer = T5Tokenizer.from_pretrained(base_t5_model)
-    data_dir = './'
-    checkpoint_output_path = './t5-model/checkpoints/'
-    result_output_path = './t5-model/model'
-    SECTION_MAX_TOKEN = 250
-    SUMMARY_LEN = 200
+rouge = datasets.load_metric("rouge")
+base_t5_model = 'google/mt5-base'
+tokenizer = T5Tokenizer.from_pretrained(base_t5_model)
+data_dir = './'
+checkpoint_output_path = './t5-model/checkpoints/'
+result_output_path = './t5-model/model'
+SECTION_MAX_TOKEN = 250
+SUMMARY_LEN = 200
     
-    context, question, answer = load_data()
+context, question, answer = load_data()
     
-    for i in range(0, len(answer)):
-        answer[i] = preprocess(answer[i])
-        question[i] = preprocess(question[i])
+for i in range(0, len(answer)):
+    answer[i] = preprocess(answer[i])
+    question[i] = preprocess(question[i])
 
-    train_data, test_data, validation_data = load_dataset(answer, question)
-    logger = logging.getLogger(__name__)
+train_data, test_data, validation_data = load_dataset(answer, question)
+logger = logging.getLogger(__name__)
 
-    main()
+train()
+#test(result_output_path)
