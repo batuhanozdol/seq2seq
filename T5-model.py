@@ -321,7 +321,7 @@ class T5FineTuner(pl.LightningModule):
         train_dataset = get_dataset(tokenizer=self.tokenizer, type_path="train", num_samples=n_samples, args=self.hparams)
         dataloader = DataLoader(train_dataset, batch_size=self.hparams.train_batch_size, drop_last=True, shuffle=True, num_workers=4)
         t_total = (
-            (len(dataloader.dataset) // (self.hparams.train_batch_size))
+            (len(dataloader.dataset) // (self.hparams.train_batch_size * max(1, self.hparams.n_gpu)))
             // self.hparams.gradient_accumulation_steps
             * float(self.hparams.num_train_epochs)
         )
@@ -427,6 +427,7 @@ def train():
         gradient_accumulation_steps=1,
         resume_from_checkpoint=None, 
         val_check_interval = 0.05, 
+	n_gpu=1,
         n_val=1000,
         n_train=-1,
         n_test=-1,
@@ -456,6 +457,7 @@ def train():
     ## If resuming from checkpoint, add an arg resume_from_checkpoint
     train_params = dict(
         accumulate_grad_batches=args.gradient_accumulation_steps,
+	gpus=args.n_gpu,
         max_epochs=args.num_train_epochs,
         precision= 16 if args.fp_16 else 32,
         gradient_clip_val=args.max_grad_norm,
