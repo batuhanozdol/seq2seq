@@ -18,7 +18,6 @@ import pandas as pd
 import numpy as np
 import torch
 import pytorch_lightning as pl
-from torch.utils.data import Dataset, DataLoader
 from nlp import load_metric, Dataset as DT
 import datasets
 
@@ -139,7 +138,7 @@ class T5FineTuner(pl.LightningModule):
         self.save_hyperparameters(hparams ) #hparams = hparams        
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name_or_path)
         self.tokenizer = T5Tokenizer.from_pretrained(hparams.tokenizer_name_or_path)
-        self.rouge_metric = load_metric('rouge') 
+        self.rouge_metric = datasets.load_metric("rouge")
         
         if self.hparams.freeze_embeds:
             self.freeze_embeds()
@@ -188,9 +187,7 @@ class T5FineTuner(pl.LightningModule):
     def parse_score(self, result):
         return {k: round(v.mid.fmeasure * 100, 4) for k, v in result.items()}
         
-    def forward(
-      self, input_ids, attention_mask=None, decoder_input_ids=None, decoder_attention_mask=None, labels=None
-  ):
+    def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, decoder_attention_mask=None, labels=None):
         return self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -261,7 +258,7 @@ class T5FineTuner(pl.LightningModule):
         tensorboard_logs = {"train_loss": loss}
         return {"loss": loss, "log": tensorboard_logs}
     
-    def training_epoch_end(self, outputs):
+    def on_train_epoch_end(self, outputs):
         avg_train_loss = torch.stack([x["loss"] for x in outputs]).mean()
         tensorboard_logs = {"avg_train_loss": avg_train_loss}
         self.log("avg_train_loss", avg_train_loss, logger=True, prog_bar=True)
@@ -272,7 +269,7 @@ class T5FineTuner(pl.LightningModule):
         return self._generative_step(batch)
     
   
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self, outputs):
         
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         tensorboard_logs = {"val_loss": avg_loss}
@@ -324,7 +321,7 @@ class T5FineTuner(pl.LightningModule):
         train_dataset = get_dataset(tokenizer=self.tokenizer, type_path="train", num_samples=n_samples, args=self.hparams)
         dataloader = DataLoader(train_dataset, batch_size=self.hparams.train_batch_size, drop_last=True, shuffle=True, num_workers=4)
         t_total = (
-            (len(dataloader.dataset) // (self.hparams.train_batch_size * max(1, self.hparams.n_gpu)))
+            (len(dataloader.dataset) // (self.hparams.train_batch_size))
             // self.hparams.gradient_accumulation_steps
             * float(self.hparams.num_train_epochs)
         )
@@ -347,8 +344,10 @@ class T5FineTuner(pl.LightningModule):
         
         return DataLoader(test_dataset, batch_size=self.hparams.eval_batch_size, num_workers=4)
 
+from torch.utils.data import Dataset, DataLoader
+
 class IctihatDataset(Dataset):
-    def __init__(self, tokenizer, type_path, num_samples, input_length, output_length, print_text=False):  
+    def __init__(self, tokenizer, type_path, num_samples, input_length, output_length, train_data, test_data, validation_data, print_text=False):  
         if type_path == 'validation':
             self.dataset =  validation_data
         elif type_path == 'train':
@@ -405,8 +404,9 @@ class IctihatDataset(Dataset):
         return {"source_ids": source_ids, "source_mask": src_mask, "target_ids": target_ids, "target_mask": target_mask}
 
 def get_dataset(tokenizer, type_path, num_samples, args):
-      return IctihatDataset(tokenizer=tokenizer, type_path=type_path, num_samples=num_samples,  input_length=args.max_input_length, 
-                        output_length=args.max_output_length)
+    return IctihatDataset(tokenizer=tokenizer, type_path=type_path, num_samples=num_samples, input_length=args.max_input_length, 
+                        output_length=args.max_output_length, train_data = train_data, test_data = test_data, validation_data = validation_data)
+
 
 def train():
     args_dict = dict(
@@ -425,7 +425,6 @@ def train():
         eval_batch_size=1,
         num_train_epochs=5,
         gradient_accumulation_steps=1,
-        n_gpu=1,
         resume_from_checkpoint=None, 
         val_check_interval = 0.05, 
         n_val=1000,
@@ -457,7 +456,6 @@ def train():
     ## If resuming from checkpoint, add an arg resume_from_checkpoint
     train_params = dict(
         accumulate_grad_batches=args.gradient_accumulation_steps,
-        gpus=args.n_gpu,
         max_epochs=args.num_train_epochs,
         precision= 16 if args.fp_16 else 32,
         gradient_clip_val=args.max_grad_norm,
@@ -509,8 +507,6 @@ def test(checkpoint):
     print(result)
 
 
-    
-rouge = datasets.load_metric("rouge")
 base_t5_model = 'google/mt5-base'
 tokenizer = T5Tokenizer.from_pretrained(base_t5_model)
 data_dir = './'
@@ -529,4 +525,4 @@ train_data, test_data, validation_data = load_dataset(answer, question)
 logger = logging.getLogger(__name__)
 
 train()
-#test(result_output_path)
+test(result_output_path)
