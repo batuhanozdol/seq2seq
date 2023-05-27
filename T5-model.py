@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 import torch
 import pytorch_lightning as pl
+from torch.utils.data import Dataset, DataLoader
 from nlp import load_metric, Dataset as DT
 import datasets
 
@@ -138,7 +139,7 @@ class T5FineTuner(pl.LightningModule):
         self.save_hyperparameters(hparams ) #hparams = hparams        
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name_or_path)
         self.tokenizer = T5Tokenizer.from_pretrained(hparams.tokenizer_name_or_path)
-        self.rouge_metric = datasets.load_metric("rouge")
+        self.rouge_metric = load_metric("rouge")
         
         if self.hparams.freeze_embeds:
             self.freeze_embeds()
@@ -243,7 +244,8 @@ class T5FineTuner(pl.LightningModule):
 #         rouge: Dict = self.calc_generative_metrics(preds, target)
         summ_len = np.mean(self.lmap(len, generated_ids))
         base_metrics.update(gen_time=gen_time, gen_len=summ_len, preds=preds, target=target)
-        self.rouge_metric.add_batch(preds, target)
+        self.rouge_metric.add_batch(preds, target, experiment_id="unique_experiment")
+
         
 #         rouge_results = self.rouge_metric.compute() 
 #         rouge_dict = self.parse_score(rouge_results)
@@ -497,6 +499,7 @@ def test(checkpoint):
     results = test_data.map(lambda batch: generate_summary(model, batch), batched=True, batch_size=1)
     print(results)
 
+    rouge = datasets.load_metric("rouge", experiment_id="unique_experiment")
     result = rouge.compute(predictions=results["pred_answer"], references=results["answer"], rouge_types=["rouge2"])["rouge2"].mid
     pd.options.display.max_colwidth = None
     df = pd.DataFrame(results)
